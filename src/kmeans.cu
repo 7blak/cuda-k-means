@@ -155,7 +155,7 @@ __global__ void updateCentroids_MethodB(const float *d_points, const int *d_labe
 
 // Wrapper for Data Generation
 void generateDataCUDA(float *h_points, const int n, const int d) {
-    size_t data_size = n * d * sizeof(float);
+    const size_t data_size = n * d * sizeof(float);
 
     float *d_points;
     curandState *d_states;
