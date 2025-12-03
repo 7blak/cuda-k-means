@@ -50,7 +50,7 @@ int main() {
     // 5. Run K-Means - Method A - Atomic Add
     std::cout << ">>>>>> [METHOD A - ATOMIC ADD] Starting CUDA K-Means..." << std::endl;
     runKMeansCUDA(h_points_a.data(), h_centroids_a.data(), h_labels_a.data(), config, true);
-    std::cout << ">>>>>> [METHOD A - ATOMIC ADD] K-Means finished." << std::endl;
+    std::cout << ">>>>>> [METHOD A - ATOMIC ADD] K-Means finished." << std::endl << std::endl;
 
     // 6. Run K-Means - Method B - Shared Memory
     std::cout << ">>>>>> [METHOD B - SHARED MEMORY] Starting CUDA K-Means..." << std::endl;
