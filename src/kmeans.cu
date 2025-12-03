@@ -88,12 +88,9 @@ __global__ void updateCentroids_MethodA(const float *d_points, const int *d_labe
     // Critical point, thousands of threads trying to write to the same address, will cause delays
     atomicAdd(&d_counts[cluster_id], 1);
 
-    const int point_start = idx * d;
-    const int centroid_start = cluster_id * d;
-
     for (int i = 0; i < d; i++) {
-        const float val = d_points[point_start + i];
-        atomicAdd(&d_newCentroids[centroid_start + i], val);
+        const float val = d_points[i * n + idx];
+        atomicAdd(&d_newCentroids[i * k + cluster_id], val);
     }
 }
 
@@ -195,7 +192,8 @@ void generateDataCUDA(float *h_points, const int n, const int d) {
 }
 
 // Wrapper for running K-Means
-void runKMeansCUDA(const float *h_points, float *h_centroids, int *h_labels, const KMeansConfig &config) {
+void runKMeansCUDA(const float *h_points, float *h_centroids, int *h_labels, const KMeansConfig &config,
+                   const bool isMethodA) {
     const size_t points_size = config.n_points * config.n_dims * sizeof(float);
     const size_t centroids_size = config.k_clusters * config.n_dims * sizeof(float);
     const size_t labels_size = config.n_points * sizeof(int);
@@ -274,10 +272,15 @@ void runKMeansCUDA(const float *h_points, float *h_centroids, int *h_labels, con
 
         cudaEventRecord(startStep);
 
-        // updateCentroids_MethodA<<<blockCount, threadCount>>>(d_points, d_labels, d_newCentroids_sum, d_newCentroids_count, config.n_points, config.n_dims, config.k_clusters);
-        updateCentroids_MethodB<<<blockCount, threadCount, shared_mem_size>>>(
-            d_points, d_labels, d_newCentroids_sum, d_newCentroids_count, config.n_points, config.n_dims,
-            config.k_clusters);
+        if (isMethodA)
+            updateCentroids_MethodA<<<blockCount, threadCount>>>(d_points, d_labels, d_newCentroids_sum,
+                                                                 d_newCentroids_count, config.n_points, config.n_dims,
+                                                                 config.k_clusters);
+        else
+            updateCentroids_MethodB<<<blockCount, threadCount, shared_mem_size>>>(
+                d_points, d_labels, d_newCentroids_sum, d_newCentroids_count, config.n_points, config.n_dims,
+                config.k_clusters);
+
         CHECK_CUDA(cudaGetLastError());
         cudaDeviceSynchronize();
 
