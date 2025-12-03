@@ -218,22 +218,57 @@ void runKMeansCUDA(const float *h_points, float *h_centroids, int *h_labels, con
     CHECK_CUDA(cudaMalloc(&d_labels, labels_size));
     CHECK_CUDA(cudaMalloc(&d_newCentroids_count, centroids_count_size));
 
+    std::cout << "Copying from CPU to GPU..." << std::endl;
+    cudaEvent_t startCopy, stopCopy;
+    cudaEventCreate(&startCopy);
+    cudaEventCreate(&stopCopy);
+
+    cudaEventRecord(startCopy);
+
     CHECK_CUDA(cudaMemcpy(d_points, h_points, points_size, cudaMemcpyHostToDevice));
     CHECK_CUDA(cudaMemcpy(d_centroids, h_centroids, centroids_size, cudaMemcpyHostToDevice));
 
-    cudaEvent_t start, stop;
+    cudaEventRecord(stopCopy);
+    cudaEventSynchronize(stopCopy);
+
+    float copyMilliseconds = 0;
+    cudaEventElapsedTime(&copyMilliseconds, startCopy, stopCopy);
+
+    std::cout << "Total Execution Time: " << copyMilliseconds << " ms" << std::endl;
+    std::cout << "Copy complete" << std::endl;
+
+    std::cout << "Starting main K-Means loop..." << std::endl;
+
+    cudaEvent_t start, stop, startStep, stopStep;
     cudaEventCreate(&start);
     cudaEventCreate(&stop);
+    cudaEventCreate(&startStep);
+    cudaEventCreate(&stopStep);
+
+    float totalAssignTime = 0.0f;
+    float totalUpdateTime = 0.0f;
+    int executedIterations = 0;
 
     cudaEventRecord(start);
 
     // -- MAIN LOOP --
     for (int iter = 0; iter < config.max_iterations; iter++) {
+        executedIterations++;
+
         // Step 1: Assign Clusters
+        cudaEventRecord(startStep);
+
         assignClusters<<<blockCount, threadCount>>>(d_points, d_centroids, d_labels, config.n_points, config.n_dims,
                                                     config.k_clusters);
         CHECK_CUDA(cudaGetLastError());
         cudaDeviceSynchronize();
+
+        cudaEventRecord(stopStep);
+        cudaEventSynchronize(stopStep);
+
+        float stepMillis = 0;
+        cudaEventElapsedTime(&stepMillis, startStep, stopStep);
+        totalAssignTime += stepMillis;
 
         // Step 2: Reset Accumulators
         CHECK_CUDA(cudaMemset(d_newCentroids_sum, 0, centroids_size));
@@ -242,12 +277,20 @@ void runKMeansCUDA(const float *h_points, float *h_centroids, int *h_labels, con
         // Step 3: Update Centroids
         size_t shared_mem_size = centroids_size + centroids_count_size;
 
+        cudaEventRecord(startStep);
+
         // updateCentroids_MethodA<<<blockCount, threadCount>>>(d_points, d_labels, d_newCentroids_sum, d_newCentroids_count, config.n_points, config.n_dims, config.k_clusters);
         updateCentroids_MethodB<<<blockCount, threadCount, shared_mem_size>>>(
             d_points, d_labels, d_newCentroids_sum, d_newCentroids_count, config.n_points, config.n_dims,
             config.k_clusters);
         CHECK_CUDA(cudaGetLastError());
         cudaDeviceSynchronize();
+
+        cudaEventRecord(stopStep);
+        cudaEventSynchronize(stopStep);
+
+        cudaEventElapsedTime(&stepMillis, startStep, stopStep);
+        totalUpdateTime += stepMillis;
 
         // Step 4: Convergence Check (CPU)
         // Copies sums and counts back to CPU for averaging
@@ -296,14 +339,23 @@ void runKMeansCUDA(const float *h_points, float *h_centroids, int *h_labels, con
     cudaEventRecord(stop);
     cudaEventSynchronize(stop);
 
-    float milliseconds = 0;
-    cudaEventElapsedTime(&milliseconds, start, stop);
+    float totalMilliseconds = 0;
+    cudaEventElapsedTime(&totalMilliseconds, start, stop);
 
-    std::cout << "Total Execution Time: " << milliseconds << " ms" << std::endl;
-    std::cout << "Average Time per Iteration: " << milliseconds / config.max_iterations << " ms" << std::endl;
+    std::cout << "-------------------------------------------------------" << std::endl;
+    std::cout << "Total Execution Time:            " << totalMilliseconds << " ms" << std::endl;
+    std::cout << "Iterations executed:             " << executedIterations << std::endl;
+    std::cout << "Average Time per Iteration:      " << totalMilliseconds / executedIterations << " ms" << std::endl;
+    std::cout << "Average AssignClusters Time:     " << totalAssignTime / executedIterations << " ms" << std::endl;
+    std::cout << "Average UpdateCentroids Time:    " << totalUpdateTime / executedIterations << " ms" << std::endl;
+    std::cout << "-------------------------------------------------------" << std::endl;
 
     cudaEventDestroy(start);
     cudaEventDestroy(stop);
+    cudaEventDestroy(startStep);
+    cudaEventDestroy(stopStep);
+    cudaEventDestroy(startCopy);
+    cudaEventDestroy(stopCopy);
 
     CHECK_CUDA(cudaMemcpy(h_centroids, d_centroids, centroids_size, cudaMemcpyDeviceToHost));
     CHECK_CUDA(cudaMemcpy(h_labels, d_labels, labels_size, cudaMemcpyDeviceToHost));
