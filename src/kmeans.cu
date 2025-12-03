@@ -166,7 +166,7 @@ void generateDataCUDA(float *h_points, const int n, const int d) {
     const int threadCount = 256;
     const int blockCount = (n + threadCount - 1) / threadCount;
 
-    unsigned long seed = time(NULL);
+    const unsigned long seed = time(nullptr);
     initRNG<<<blockCount, threadCount>>>(d_states, seed, n);
     CHECK_CUDA(cudaGetLastError());
     cudaDeviceSynchronize();
