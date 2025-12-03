@@ -30,11 +30,9 @@ __global__ void generatePointsKernel(float *d_points, curandState *states, const
     if (idx < n) {
         curandState localState = states[idx];
 
-        const int point_start_index = idx * d;
-
         for (int i = 0; i < d; i++) {
             const float rand_val = curand_uniform(&localState);
-            d_points[point_start_index + i] = rand_val * 100.0f;
+            d_points[i * n + idx] = rand_val * 100.0f;
         }
 
         states[idx] = localState;
@@ -53,17 +51,15 @@ __global__ void assignClusters(const float *d_points, const float *d_centroids, 
 
     float min_dist = MAXFLOAT;
     int best_cluster = -1;
-    const int point_start_index = idx * d;
 
     // Loop through all K centroids
     for (int c = 0; c < k; c++) {
         float dist = 0.0f;
-        const int centroid_start_index = c * d;
 
         // Euclidean Distance Calculation
         for (int i = 0; i < d; i++) {
-            const float p_val = d_points[point_start_index + i];
-            const float c_val = d_centroids[centroid_start_index + i];
+            const float p_val = d_points[i * n + idx];
+            const float c_val = d_centroids[i * k + c];
             const float diff = p_val - c_val;
             dist += diff * diff; // Squared distance is sufficient for comparison (avoiding using sqrt())
         }
@@ -103,7 +99,7 @@ __global__ void updateCentroids_MethodA(const float *d_points, const int *d_labe
 
 // Method B: Shared Memory - accumulate locally in Shared Memory first, then write to Global
 __global__ void updateCentroids_MethodB(const float *d_points, const int *d_labels, float *d_newCentroids,
-                                        int *d_counts, int n, int d, int k) {
+                                        int *d_counts, const int n, const int d, const int k) {
     // Dynamic Shared Memory: Size decided at runtime launch
     extern __shared__ float s_mem[];
 
@@ -112,8 +108,8 @@ __global__ void updateCentroids_MethodB(const float *d_points, const int *d_labe
     int *s_counts = reinterpret_cast<int *>(&s_centroids[k * d]);
 
     // 1. Initialize Shared Memory to 0 (Collaborative reset by thread block)
-    int s_len_floats = k * d;
-    int s_len_inits = k;
+    const int s_len_floats = k * d;
+    const int s_len_inits = k;
     for (int i = threadIdx.x; i < s_len_floats; i += blockDim.x) {
         s_centroids[i] = 0.0f;
     }
@@ -129,29 +125,28 @@ __global__ void updateCentroids_MethodB(const float *d_points, const int *d_labe
     if (idx < n) {
         const int cluster_id = d_labels[idx];
         atomicAdd(&s_counts[cluster_id], 1);
-        const int point_start = idx * d;
-        const int s_centroid_start = cluster_id * d;
 
         for (int i = 0; i < d; i++) {
-            const float val = d_points[point_start + i];
-            atomicAdd(&s_centroids[s_centroid_start + i], val);
+            const float val = d_points[i * n + idx];
+            atomicAdd(&s_centroids[i * k + cluster_id], val);
         }
+    }
 
-        __syncthreads(); // Wait for all threads to finish accumulation
+    __syncthreads(); // Wait for all threads to finish accumulation
 
-        // 3. Write Shared Memory totals to Global Memory
-        // Only the first K threads do the writing to reduce global traffic
-        if (threadIdx.x < k) {
-            const int thread_cluster_id = threadIdx.x;
-            atomicAdd(&d_counts[thread_cluster_id], s_counts[thread_cluster_id]);
+    // 3. Write Shared Memory totals to Global Memory
+    // Only the first K threads do the writing to reduce global traffic
+    if (threadIdx.x < k) {
+        const int cluster_id = threadIdx.x;
+        atomicAdd(&d_counts[cluster_id], s_counts[cluster_id]);
 
-            const int start_idx = thread_cluster_id * d;
-            for (int i = 0; i < d; i++) {
-                atomicAdd(&d_newCentroids[start_idx + i], s_centroids[start_idx + i]);
-            }
+        for (int i = 0; i < d; i++) {
+            const int offset = i * k + cluster_id;
+            atomicAdd(&d_newCentroids[offset], s_centroids[offset]);
         }
     }
 }
+
 
 // Wrapper for Data Generation
 void generateDataCUDA(float *h_points, const int n, const int d) {
@@ -304,16 +299,17 @@ void runKMeansCUDA(const float *h_points, float *h_centroids, int *h_labels, con
 
         float total_movement = 0.0f;
 
-        for (int i = 0; i < config.k_clusters; i++) {
-            const int count = h_temp_counts[i];
+        for (int c = 0; c < config.k_clusters; c++) {
+            const int count = h_temp_counts[c];
 
             if (count > 0) {
-                for (int j = 0; j < config.n_dims; j++) {
-                    const int idx = i * config.n_dims + j;
+                for (int d = 0; d < config.n_dims; d++) {
+                    const int idx = d * config.k_clusters + c;
 
                     const float new_val = h_temp_sums[idx] / count;
                     const float old_val = h_centroids[idx];
                     h_centroids[idx] = new_val;
+
                     float diff = new_val - old_val;
                     total_movement += diff * diff;
                 }

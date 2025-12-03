@@ -20,22 +20,25 @@ int main() {
     std::vector<float>  h_centroids;
     std::vector<int>  h_labels;
 
+    // 3. Initialization
     // Needed for GPU writing data back into this array
     h_points.resize(config.n_points * config.n_dims);
+    // Prepare host arrays for centroids and labels
+    h_centroids.resize(config.k_clusters * config.n_dims);
+    h_labels.resize(config.n_points);
 
-    // 3. Data Generation (GPU)
+    // 4. Data Generation (GPU)
     // Generates random points on the GPU using curand functionality.
     std::cout << "Generating " << config.n_points << " points on GPU..." << std::endl;
     generateDataCUDA(h_points.data(), config.n_points, config.n_dims);
     std::cout << "Data generation complete." << std::endl;
 
-    // 4. Initialization
-    // Prepare host arrays for centroids and labels
-    h_centroids.resize(config.k_clusters * config.n_dims);
-    h_labels.resize(config.n_points);
-
     // Naive initialization: Pick the first K points as the initial centroids
-    std::copy_n(h_points.begin(), config.k_clusters * config.n_dims, h_centroids.begin());
+    for (int d = 0; d < config.n_dims; d++) {
+        for (int c = 0; c < config.k_clusters; c++) {
+            h_centroids[d * config.k_clusters + c] = h_points[d * config.n_points + c];
+        }
+    }
 
     // 5. Run K-Means
     std::cout << "Starting CUDA K-Means..." << std::endl;
