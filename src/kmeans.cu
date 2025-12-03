@@ -167,6 +167,13 @@ void generateDataCUDA(float *h_points, const int n, const int d) {
     const int blockCount = (n + threadCount - 1) / threadCount;
 
     const unsigned long seed = time(nullptr);
+
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+    cudaEventRecord(start);
+
     initRNG<<<blockCount, threadCount>>>(d_states, seed, n);
     CHECK_CUDA(cudaGetLastError());
     cudaDeviceSynchronize();
@@ -176,6 +183,17 @@ void generateDataCUDA(float *h_points, const int n, const int d) {
     cudaDeviceSynchronize();
 
     CHECK_CUDA(cudaMemcpy(h_points, d_points, data_size, cudaMemcpyDeviceToHost));
+
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+
+    float milliseconds = 0;
+    cudaEventElapsedTime(&milliseconds, start, stop);
+
+    std::cout << "Total Execution Time: " << milliseconds << " ms" << std::endl;
+
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
 
     cudaFree(d_points);
     cudaFree(d_states);
