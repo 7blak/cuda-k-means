@@ -35,7 +35,7 @@ int main() {
     h_labels.resize(config.n_points);
 
     // Naive initialization: Pick the first K points as the initial centroids
-    std::copy_n(h_points.begin(), (config.k_clusters * config.n_dims), h_centroids.begin());
+    std::copy_n(h_points.begin(), config.k_clusters * config.n_dims, h_centroids.begin());
 
     // 5. Run K-Means
     std::cout << "Starting CUDA K-Means..." << std::endl;
