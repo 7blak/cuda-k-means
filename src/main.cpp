@@ -10,9 +10,9 @@ int main() {
     // Problem size (n_points) and algorithm parameters.
     KMeansConfig config{};
     config.n_points = 100'000'000;
-    config.n_dims = 3;
-    config.k_clusters = 5;
-    config.max_iterations = 100;
+    config.n_dims = 5;
+    config.k_clusters = 10;
+    config.max_iterations = 10000;
     config.threshold = 0.001f;
 
     // 2. Host memory allocation

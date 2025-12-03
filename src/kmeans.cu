@@ -18,7 +18,7 @@
 
 // Initialized a random state for EACH thread. This is computationally expensive, so it is only done once (best practice)
 __global__ void initRNG(curandState *states, unsigned long seed, int n) {
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    const int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx < n)
         curand_init(seed, idx, 0, &states[idx]);
 }
