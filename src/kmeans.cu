@@ -186,6 +186,7 @@ void runKMeansCUDA(const float *h_points, float *h_centroids, int *h_labels, con
     const size_t points_size = config.n_points * config.n_dims * sizeof(float);
     const size_t centroids_size = config.k_clusters * config.n_dims * sizeof(float);
     const size_t labels_size = config.n_points * sizeof(int);
+    const size_t centroids_count_size = config.k_clusters * sizeof(int);
 
     const int threadCount = 256;
     const int blockCount = (config.n_points * config.n_dims + threadCount - 1) / threadCount;
@@ -197,7 +198,7 @@ void runKMeansCUDA(const float *h_points, float *h_centroids, int *h_labels, con
     CHECK_CUDA(cudaMalloc(&d_centroids, centroids_size));
     CHECK_CUDA(cudaMalloc(&d_newCentroids_sum, centroids_size));
     CHECK_CUDA(cudaMalloc(&d_labels, labels_size));
-    CHECK_CUDA(cudaMalloc(&d_newCentroids_count, config.k_clusters * sizeof(int)));
+    CHECK_CUDA(cudaMalloc(&d_newCentroids_count, centroids_count_size));
 
     CHECK_CUDA(cudaMemcpy(d_points, h_points, points_size, cudaMemcpyHostToDevice));
     CHECK_CUDA(cudaMemcpy(d_centroids, h_centroids, centroids_size, cudaMemcpyHostToDevice));
@@ -218,10 +219,10 @@ void runKMeansCUDA(const float *h_points, float *h_centroids, int *h_labels, con
 
         // Step 2: Reset Accumulators
         CHECK_CUDA(cudaMemset(d_newCentroids_sum, 0, centroids_size));
-        CHECK_CUDA(cudaMemset(d_newCentroids_count, 0, config.k_clusters * sizeof(int)));
+        CHECK_CUDA(cudaMemset(d_newCentroids_count, 0, centroids_count_size));
 
         // Step 3: Update Centroids
-        size_t shared_mem_size = config.k_clusters * config.n_dims * sizeof(float) + config.k_clusters * sizeof(int);
+        size_t shared_mem_size = centroids_size + centroids_count_size;
 
         // updateCentroids_MethodA<<<blockCount, threadCount>>>(d_points, d_labels, d_newCentroids_sum, d_newCentroids_count, config.n_points, config.n_dims, config.k_clusters);
         updateCentroids_MethodB<<<blockCount, threadCount, shared_mem_size>>>(
