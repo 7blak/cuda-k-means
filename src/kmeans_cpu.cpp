@@ -98,7 +98,7 @@ void runKMeansCPU(const float *points, float *centroids, int *labels, const KMea
             break;
         }
 
-        std::cout << "Iteration: " << iterations << std::endl;
+        // std::cout << "Iteration: " << iterations << std::endl;
     }
 
     auto stop_total = std::chrono::high_resolution_clock::now();
