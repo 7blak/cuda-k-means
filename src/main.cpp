@@ -12,7 +12,7 @@ int main() {
     config.n_points = 100'000'000;
     config.n_dims = 5;
     config.k_clusters = 10;
-    config.max_iterations = 10000;
+    config.max_iterations = 10'000;
     config.threshold = 0.001f;
 
     // 2. Host memory allocation
