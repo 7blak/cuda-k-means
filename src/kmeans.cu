@@ -267,12 +267,12 @@ void runKMeansCUDA(const float *h_points, float *h_centroids, int *h_labels, con
         CHECK_CUDA(cudaMemcpy(d_centroids, h_centroids, centroids_size, cudaMemcpyHostToDevice));
 
         // Code for showing changes among the first 10 points
-        std::vector<int> debug_labels(10);
-        cudaMemcpy(debug_labels.data(), d_labels, 10 * sizeof(int), cudaMemcpyDeviceToHost);
-        std::cout << "Debug Iteration " << iter << "\t| Movement: " << total_movement << "\tLabels:\t";
-        for (int i = 0; i < 10; i++)
-            std::cout << debug_labels[i] << " ";
-        std::cout << std::endl;
+        // std::vector<int> debug_labels(10);
+        // cudaMemcpy(debug_labels.data(), d_labels, 10 * sizeof(int), cudaMemcpyDeviceToHost);
+        // std::cout << "Debug Iteration " << iter << "\t| Movement: " << total_movement << "\tLabels:\t";
+        // for (int i = 0; i < 10; i++)
+        //     std::cout << debug_labels[i] << " ";
+        // std::cout << std::endl;
     }
 
     cudaEventRecord(stop);
