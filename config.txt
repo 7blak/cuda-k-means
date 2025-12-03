@@ -1,4 +1,4 @@
-n_points=10000000
+n_points=1000000
 n_dims=4
 k_clusters=16
 max_iterations=1000
