@@ -115,7 +115,7 @@ int main(int argc, char** argv) {
     // 6. Run K-Means - Method B - Shared Memory
     std::cout << ">>>>>> [METHOD B - SHARED MEMORY] Starting CUDA K-Means..." << std::endl;
     runKMeansCUDA(h_points.data(), h_centroids_b.data(), h_labels_b.data(), config, false);
-    std::cout << ">>>>>> [METHOD B - SHARED MEMORY] K-Means finished." << std::endl;
+    std::cout << ">>>>>> [METHOD B - SHARED MEMORY] K-Means finished." << std::endl << std::endl;
 
     // 7. Run K-Means - CPU
     if (runCPU) {
