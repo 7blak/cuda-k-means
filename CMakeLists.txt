@@ -12,3 +12,5 @@ set(CUDA_SOURCES src/kmeans.cu)
 add_executable(cuda_k_means ${HOST_SOURCES} ${CUDA_SOURCES})
 
 target_include_directories(cuda_k_means PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}}/src)
+
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.txt ${CMAKE_CURRENT_BINARY_DIR}/config.txt COPYONLY)

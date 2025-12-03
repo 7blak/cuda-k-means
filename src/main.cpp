@@ -1,20 +1,66 @@
+#include <fstream>
 #include <iostream>
 #include <vector>
-#include <algorithm>
 #include <iomanip>
 
 #include "kmeans.cuh"
 #include "kmeans_cpu.h"
 
-int main() {
-    // 1. Configuration
-    // Problem size (n_points) and algorithm parameters.
+// Helper to trim whitespace
+std::string trim(const std::string &str) {
+    const size_t first = str.find_first_not_of(" \t");
+    if (std::string::npos == first) return str;
+    const size_t last = str.find_last_not_of(" \t");
+    return str.substr(first, last - first + 1);
+}
+
+KMeansConfig loadConfig(const std::string &filename) {
     KMeansConfig config{};
-    config.n_points = 1'000'000;
-    config.n_dims = 4;
-    config.k_clusters = 16;
-    config.max_iterations = 1'000;
-    config.threshold = 0.0001f;
+    std::ifstream file(filename);
+
+    if (!file.is_open()) {
+        std::cerr << "Error: Could not open " << filename << ". Using default." << std::endl;
+        // Default fallback
+        config.n_points = 1'000'000;
+        config.n_dims = 3;
+        config.k_clusters = 5;
+        config.max_iterations = 100;
+        config.threshold = 0.001f;
+        return config;
+    }
+
+    std::string line;
+    while (std::getline(file, line)) {
+        std::istringstream is_line(line);
+        std::string key;
+        if (std::getline(is_line, key, '=')) {
+            std::string value;
+            if (std::getline(is_line, value)) {
+                key = trim(key);
+                value = trim(value);
+
+                if (key == "n_points") config.n_points = std::stoi(value);
+                else if (key == "n_dims") config.n_dims = std::stoi(value);
+                else if (key == "k_clusters") config.k_clusters = std::stoi(value);
+                else if (key == "max_iterations") config.max_iterations = std::stoi(value);
+                else if (key == "threshold") config.threshold = std::stof(value);
+            }
+        }
+    }
+
+    std::cout << "Loaded Configuration from " << filename << ":" << std::endl;
+    std::cout << "  Points: " << config.n_points << std::endl;
+    std::cout << "  Dims:   " << config.n_dims << std::endl;
+    std::cout << "  K:      " << config.k_clusters << std::endl;
+    std::cout << "  Iter:   " << config.max_iterations << std::endl;
+    std::cout << "  Thresh: " << config.threshold << std::endl << std::endl;
+
+    return config;
+}
+
+int main() {
+    // 1. Load Configuration
+    KMeansConfig config = loadConfig("config.txt");
 
     // 2. Host memory allocation
     std::vector<float> h_points;
