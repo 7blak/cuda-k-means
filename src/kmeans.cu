@@ -17,14 +17,14 @@
 // --- RANDOM NUMBER GENERATION KERNELS ---
 
 // Initialized a random state for EACH thread. This is computationally expensive, so it is only done once (best practice)
-__global__ void initRNG(curandState *states, unsigned long seed, int n) {
+__global__ void initRNG(curandState *states, const unsigned long seed, const int n) {
     const int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx < n)
         curand_init(seed, idx, 0, &states[idx]);
 }
 
 // Uses the initialized states to generate random floats
-__global__ void generatePointsKernel(float *d_points, curandState *states, int n, int d) {
+__global__ void generatePointsKernel(float *d_points, curandState *states, const int n, const int d) {
     const int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
     if (idx < n) {
