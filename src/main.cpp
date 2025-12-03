@@ -58,7 +58,15 @@ KMeansConfig loadConfig(const std::string &filename) {
     return config;
 }
 
-int main() {
+int main(int argc, char** argv) {
+    bool runCPU = true;
+    for (int i = 1; i < argc; i++) {
+        if (std::string(argv[i]) == "--no-cpu") {
+            runCPU = false;
+            std::cout << "Flag --no-cpu detected: Skipping CPU implementation." << std::endl;
+        }
+    }
+
     // 1. Load Configuration
     KMeansConfig config = loadConfig("config.txt");
 
@@ -110,9 +118,13 @@ int main() {
     std::cout << ">>>>>> [METHOD B - SHARED MEMORY] K-Means finished." << std::endl;
 
     // 7. Run K-Means - CPU
-    std::cout << ">>>>>> [METHOD C - CPU] Starting CPU K-Means..." << std::endl;
-    runKMeansCPU(h_points.data(), h_centroids_cpu.data(), h_labels_cpu.data(), config);
-    std::cout << ">>>>>> [METHOD C - CPU] K-Means finished." << std::endl;
+    if (runCPU) {
+        std::cout << ">>>>>> [METHOD C - CPU] Starting CPU K-Means..." << std::endl;
+        runKMeansCPU(h_points.data(), h_centroids_cpu.data(), h_labels_cpu.data(), config);
+        std::cout << ">>>>>> [METHOD C - CPU] K-Means finished." << std::endl;
+    } else {
+        std::cout << ">>>>>> [METHOD C - CPU] Skipped (--no-cpu flag present)." << std::endl;
+    }
 
     return 0;
 }
