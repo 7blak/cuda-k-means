@@ -2,7 +2,7 @@
 
 A high-performance implementation of the K-Means clustering algorithm using CUDA. This project generates random data on the GPU and compares two different parallelization strategies for centroid updates.
 
-## To skip CPU K-Means implementation, use flag --no-cpu
+### To skip CPU K-Means implementation, use flag --no-cpu
 
 ## Prerequisites
 * **NVIDIA GPU** with CUDA support.
