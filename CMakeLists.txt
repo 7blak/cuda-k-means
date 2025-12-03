@@ -5,7 +5,8 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CUDA_STANDARD 17)
 set(CMAKE_CUDA_ARCHITECTURES "native")
 
-set(HOST_SOURCES src/main.cpp)
+set(HOST_SOURCES src/main.cpp
+        src/kmeans_cpu.cpp)
 set(CUDA_SOURCES src/kmeans.cu)
 
 add_executable(cuda_k_means ${HOST_SOURCES} ${CUDA_SOURCES})

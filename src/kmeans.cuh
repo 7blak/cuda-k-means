@@ -8,5 +8,7 @@ struct KMeansConfig {
     float threshold;
 };
 
-void runKMeansCUDA(const float* h_points, float* h_centroids, int* h_labels, const KMeansConfig& config, bool isMethodA = false);
-void generateDataCUDA(float* h_points, int n, int d);
+void runKMeansCUDA(const float *h_points, float *h_centroids, int *h_labels, const KMeansConfig &config,
+                   bool isMethodA = false);
+
+void generateDataCUDA(float *h_points, int n, int d);

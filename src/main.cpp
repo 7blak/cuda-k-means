@@ -4,23 +4,29 @@
 #include <iomanip>
 
 #include "kmeans.cuh"
+#include "kmeans_cpu.h"
 
 int main() {
     // 1. Configuration
     // Problem size (n_points) and algorithm parameters.
     KMeansConfig config{};
-    config.n_points = 100'000'000;
+    config.n_points = 1'000'000;
     config.n_dims = 4;
     config.k_clusters = 16;
     config.max_iterations = 1'000;
     config.threshold = 0.0001f;
 
     // 2. Host memory allocation
-    std::vector<float>  h_points;
-    std::vector<float>  h_centroids_a;
-    std::vector<int>  h_labels_a;
-    std::vector<float>  h_centroids_b;
-    std::vector<int>  h_labels_b;
+    std::vector<float> h_points;
+
+    std::vector<float> h_centroids_a;
+    std::vector<int> h_labels_a;
+
+    std::vector<float> h_centroids_b;
+    std::vector<int> h_labels_b;
+
+    std::vector<float> h_centroids_cpu;
+    std::vector<int> h_labels_cpu;
 
     // 3. Initialization
     // Needed for GPU writing data back into this array
@@ -29,6 +35,7 @@ int main() {
     h_centroids_a.resize(config.k_clusters * config.n_dims);
     h_labels_a.resize(config.n_points);
     h_labels_b.resize(config.n_points);
+    h_labels_cpu.resize(config.n_points);
 
     // 4. Data Generation (GPU)
     // Generates random points on the GPU using curand functionality.
@@ -44,6 +51,7 @@ int main() {
     }
 
     h_centroids_b = h_centroids_a;
+    h_centroids_cpu = h_centroids_a;
 
     // 5. Run K-Means - Method A - Atomic Add
     std::cout << ">>>>>> [METHOD A - ATOMIC ADD] Starting CUDA K-Means..." << std::endl;
@@ -54,6 +62,11 @@ int main() {
     std::cout << ">>>>>> [METHOD B - SHARED MEMORY] Starting CUDA K-Means..." << std::endl;
     runKMeansCUDA(h_points.data(), h_centroids_b.data(), h_labels_b.data(), config, false);
     std::cout << ">>>>>> [METHOD B - SHARED MEMORY] K-Means finished." << std::endl;
+
+    // 7. Run K-Means - CPU
+    std::cout << ">>>>>> [METHOD C - CPU] Starting CPU K-Means..." << std::endl;
+    runKMeansCPU(h_points.data(), h_centroids_cpu.data(), h_labels_cpu.data(), config);
+    std::cout << ">>>>>> [METHOD C - CPU] K-Means finished." << std::endl;
 
     return 0;
 }
